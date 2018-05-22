@@ -1,0 +1,8 @@
+*_images_*/
+META-INF/
+magisk-module-template/
+system/
+target/
+*.img
+*.zip
+*.tgz

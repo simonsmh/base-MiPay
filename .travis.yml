@@ -1,0 +1,46 @@
+language: bash
+addons:
+  apt:
+    packages:
+      - rsync
+      - simg2img
+      - tar
+      - zip
+branches:
+  only:
+    - master
+env:
+  - URL="http://bigota.d.miui.com/V9.5.15.0.ODGCNFA/polaris_images_V9.5.15.0.ODGCNFA_20180425.0000.00_8.0_cn_9c124cb4a1.tgz"
+  - mipay_apps="Mipay NextPay TSMClient UPTsmService"
+  - mipay_libs="libuptsmaddon.so"
+script:
+# Download & Mount Process
+  - wget $URL
+  - tar -xf $(basename $URL)
+  - simg2img $(basename $URL | sed -n 's/\(.*\)_.*/\1/p')/images/system.img target.img
+  - mkdir -p target
+  - sudo mount target.img target
+# Copying Required files
+  - mkdir -p system/app system/lib64
+  - for i in $mipay_apps; do rsync -a target/app/$i system/app/; done
+  - for i in $mipay_libs; do rsync -a target/lib64/$i system/lib64/; done
+# Create Flashing zip
+  - mkdir -p META-INF/com/google/android
+  - wget https://github.com/linusyang92/mipay-extract/raw/master/tools/update-binary -O META-INF/com/google/android/update-binary
+  - zip -r ./flash-mipay.zip ./system ./META-INF
+# Create Magisk zip
+  - branch=1500
+  - git clone -b $branch git@github.com:topjohnwu/magisk-module-template.git
+  - cd magisk-module-template
+  - rm -rf .git* README.md
+  - rsync -a ../system ./
+  - echo "ro.se.type=eSE,HCE,UICC" >> common/system.prop
+  - sed -i "s/PROPFILE=false/PROPFILE=true/g;s/Magisk Module Template  /MIUI MiPay Module/g" config.sh
+  - echo -e "id=mipay\nname=MIUI MiPay Module\nversion=$(date -u +%Y%m%d)\nversionCode=$(date -u +%Y%m%d)\nauthor=simonsmh\ndescription=MIUI v9 MiPay Module (MIX 2S)\nminMagisk=1500" > module.prop
+  - zip -r ../magisk-mipay.zip ./
+  - cd ..
+# Clean Up
+  - sudo umount target
+  - ls -la
+after_success:
+  - ls -la
