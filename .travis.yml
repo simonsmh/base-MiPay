@@ -1,18 +1,18 @@
 language: bash
-addons:
-  apt:
-    packages:
-      - rsync
-      - simg2img
-      - tar
-      - zip
+sudo: enabled
 branches:
   only:
     - master
+notifications:
+  email: false
 env:
-  - URL="http://bigota.d.miui.com/V9.5.15.0.ODGCNFA/polaris_images_V9.5.15.0.ODGCNFA_20180425.0000.00_8.0_cn_9c124cb4a1.tgz"
-  - mipay_apps="Mipay NextPay TSMClient UPTsmService"
-  - mipay_libs="libuptsmaddon.so"
+  - URL="http://bigota.d.miui.com/V9.5.15.0.ODGCNFA/polaris_images_V9.5.15.0.ODGCNFA_20180425.0000.00_8.0_cn_9c124cb4a1.tgz" mipay_apps="Mipay NextPay TSMClient UPTsmService" mipay_libs="libuptsmaddon.so" branch=1500
+before_script:
+  - git clone https://github.com/anestisb/android-simg2img
+  - cd android-simg2img
+  - sudo mkdir -p /usr/local/include/sparse
+  - make && sudo make install
+  - cd ..
 script:
 # Download & Mount Process
   - wget $URL
@@ -29,18 +29,16 @@ script:
   - wget https://github.com/linusyang92/mipay-extract/raw/master/tools/update-binary -O META-INF/com/google/android/update-binary
   - zip -r ./flash-mipay.zip ./system ./META-INF
 # Create Magisk zip
-  - branch=1500
-  - git clone -b $branch git@github.com:topjohnwu/magisk-module-template.git
+  - git clone -b $branch https://github.com/topjohnwu/magisk-module-template.git
   - cd magisk-module-template
   - rm -rf .git* README.md
   - rsync -a ../system ./
   - echo "ro.se.type=eSE,HCE,UICC" >> common/system.prop
   - sed -i "s/PROPFILE=false/PROPFILE=true/g;s/Magisk Module Template  /MIUI MiPay Module/g" config.sh
-  - echo -e "id=mipay\nname=MIUI MiPay Module\nversion=$(date -u +%Y%m%d)\nversionCode=$(date -u +%Y%m%d)\nauthor=simonsmh\ndescription=MIUI v9 MiPay Module (MIX 2S)\nminMagisk=1500" > module.prop
+  - echo -e "id=mipay\nname=MIUI MiPay Module\nversion=$(date -u +%Y%m%d)\nversionCode=$(date -u +%Y%m%d)\nauthor=simonsmh\ndescription=MIUI v9 MiPay Module (MIX 2S)\nminMagisk=$branch" > module.prop
   - zip -r ../magisk-mipay.zip ./
   - cd ..
 # Clean Up
   - sudo umount target
-  - ls -la
 after_success:
-  - ls -la
+  - ls -la *-mipay.zip
